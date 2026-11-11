@@ -86,6 +86,7 @@ export const useComposerStatus = () => {
     uiState.sessionStats.lastPromptTokenCount,
     uiState.currentModel,
     settings.merged.model?.compressionThreshold,
+    settings.merged.model?.contextWindow,
   );
 
   const loadingPhrases = settings.merged.ui.loadingPhrases;

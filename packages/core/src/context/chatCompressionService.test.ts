@@ -193,6 +193,7 @@ describe('ChatCompressionService', () => {
         return this;
       },
       getCompressionThreshold: vi.fn(),
+      getContextWindow: vi.fn().mockReturnValue(undefined),
       getBaseLlmClient: vi.fn().mockReturnValue({
         generateContent: mockGenerateContent,
       }),
@@ -279,6 +280,68 @@ describe('ChatCompressionService', () => {
     );
     expect(result.info.compressionStatus).toBe(CompressionStatus.NOOP);
     expect(result.newHistory).toBeNull();
+  });
+
+  it('should use contextWindow from config to override tokenLimit when deciding to compress', async () => {
+    vi.mocked(tokenLimit).mockImplementation(
+      (_model: string, contextWindow?: number) =>
+        contextWindow && contextWindow > 0 ? contextWindow : 1_000_000,
+    );
+    vi.mocked(mockConfig.getContextWindow).mockReturnValue(200_000);
+    vi.mocked(mockConfig.getCompressionThreshold).mockResolvedValue(0.2);
+
+    const history: Content[] = [
+      { role: 'user', parts: [{ text: 'msg1' }] },
+      { role: 'model', parts: [{ text: 'msg2' }] },
+      { role: 'user', parts: [{ text: 'msg3' }] },
+      { role: 'model', parts: [{ text: 'msg4' }] },
+    ];
+    vi.mocked(mockChat.getHistory).mockReturnValue(history);
+
+    vi.mocked(mockChat.getLastPromptTokenCount).mockReturnValue(39_999);
+    const under = await service.compress(
+      mockChat,
+      mockPromptId,
+      false,
+      mockModel,
+      mockConfig,
+      false,
+    );
+    expect(under.info.compressionStatus).toBe(CompressionStatus.NOOP);
+    expect(tokenLimit).toHaveBeenCalledWith(mockModel, 200_000);
+
+    vi.mocked(mockChat.getLastPromptTokenCount).mockReturnValue(40_000);
+    const over = await service.compress(
+      mockChat,
+      mockPromptId,
+      false,
+      mockModel,
+      mockConfig,
+      false,
+    );
+    expect(over.info.compressionStatus).toBe(CompressionStatus.COMPRESSED);
+    expect(over.newHistory).not.toBeNull();
+  });
+
+  it('should keep model-based tokenLimit behavior when contextWindow is not set', async () => {
+    vi.mocked(tokenLimit).mockReturnValue(1_000_000);
+    vi.mocked(mockConfig.getContextWindow).mockReturnValue(undefined);
+    vi.mocked(mockConfig.getCompressionThreshold).mockResolvedValue(0.2);
+
+    const history: Content[] = [{ role: 'user', parts: [{ text: 'msg1' }] }];
+    vi.mocked(mockChat.getHistory).mockReturnValue(history);
+    vi.mocked(mockChat.getLastPromptTokenCount).mockReturnValue(40_000);
+
+    const result = await service.compress(
+      mockChat,
+      mockPromptId,
+      false,
+      mockModel,
+      mockConfig,
+      false,
+    );
+    expect(result.info.compressionStatus).toBe(CompressionStatus.NOOP);
+    expect(tokenLimit).toHaveBeenCalledWith(mockModel, undefined);
   });
 
   it('should compress if over token threshold with verification turn', async () => {

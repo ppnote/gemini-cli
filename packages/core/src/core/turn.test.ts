@@ -11,6 +11,7 @@ import {
   type ServerGeminiToolCallRequestEvent,
   type ServerGeminiErrorEvent,
 } from './turn.js';
+import { PSEUDO_TOOL_CALL_ERROR_MESSAGE } from '../utils/pseudoToolCall.js';
 import type { GenerateContentResponse, Part, Content } from '@google/genai';
 import { reportError } from '../utils/errorReporting.js';
 import {
@@ -265,6 +266,140 @@ describe('Turn', () => {
       ]);
       expect(turn.getDebugResponses().length).toBe(0);
       expect(reportError).not.toHaveBeenCalled(); // Should not report as error
+    });
+
+    it('should yield InvalidStream when model text contains a pseudo tool_call', async () => {
+      const mockResponseStream = (async function* () {
+        yield {
+          type: StreamEventType.CHUNK,
+          value: {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: 'Need harder evidence.\n<tool_call>\n<function=run_shell=command>\n<parameter=command>\nplaceholder\n</parameter>\n</tool_call>',
+                    },
+                  ],
+                },
+              },
+            ],
+          } as GenerateContentResponse,
+        };
+      })();
+      mockSendMessageStream.mockResolvedValue(mockResponseStream);
+
+      const events = [];
+      for await (const event of turn.run(
+        { model: 'gemini' },
+        [{ text: 'inspect frames' }],
+        new AbortController().signal,
+      )) {
+        events.push(event);
+      }
+
+      expect(events).toEqual([
+        {
+          type: GeminiEventType.Content,
+          value:
+            'Need harder evidence.\n<tool_call>\n<function=run_shell=command>\n<parameter=command>\nplaceholder\n</parameter>\n</tool_call>',
+        },
+        {
+          type: GeminiEventType.InvalidStream,
+          value: {
+            type: 'MALFORMED_FUNCTION_CALL',
+            message: PSEUDO_TOOL_CALL_ERROR_MESSAGE,
+          },
+        },
+      ]);
+    });
+
+    it('should detect a tool_call tag split across streamed chunks and stop waiting', async () => {
+      const mockResponseStream = (async function* () {
+        yield {
+          type: StreamEventType.CHUNK,
+          value: {
+            candidates: [
+              { content: { parts: [{ text: 'Need harder evidence. ' }] } },
+            ],
+          } as GenerateContentResponse,
+        };
+        yield {
+          type: StreamEventType.CHUNK,
+          value: {
+            candidates: [{ content: { parts: [{ text: '<tool_call>' }] } }],
+          } as GenerateContentResponse,
+        };
+        yield {
+          type: StreamEventType.CHUNK,
+          value: {
+            candidates: [
+              { content: { parts: [{ text: 'should not be processed' }] } },
+            ],
+          } as GenerateContentResponse,
+        };
+      })();
+      mockSendMessageStream.mockResolvedValue(mockResponseStream);
+
+      const events = [];
+      for await (const event of turn.run(
+        { model: 'gemini' },
+        [{ text: 'inspect frames' }],
+        new AbortController().signal,
+      )) {
+        events.push(event);
+      }
+
+      expect(events).toEqual([
+        { type: GeminiEventType.Content, value: 'Need harder evidence. ' },
+        { type: GeminiEventType.Content, value: '<tool_call>' },
+        {
+          type: GeminiEventType.InvalidStream,
+          value: {
+            type: 'MALFORMED_FUNCTION_CALL',
+            message: PSEUDO_TOOL_CALL_ERROR_MESSAGE,
+          },
+        },
+      ]);
+    });
+
+    it('should not treat plain text as a pseudo tool call when a native functionCall is present', async () => {
+      const mockResponseStream = (async function* () {
+        yield {
+          type: StreamEventType.CHUNK,
+          value: {
+            candidates: [
+              {
+                content: {
+                  parts: [{ text: 'Calling the tool now. <tool_call>' }],
+                },
+              },
+            ],
+            functionCalls: [
+              {
+                id: 'fc1',
+                name: 'tool1',
+                args: { arg1: 'val1' },
+              },
+            ],
+          } as unknown as GenerateContentResponse,
+        };
+      })();
+      mockSendMessageStream.mockResolvedValue(mockResponseStream);
+
+      const events = [];
+      for await (const event of turn.run(
+        { model: 'gemini' },
+        [{ text: 'Use tools' }],
+        new AbortController().signal,
+      )) {
+        events.push(event);
+      }
+
+      expect(events.map((event) => event.type)).toEqual([
+        GeminiEventType.Content,
+        GeminiEventType.ToolCallRequest,
+      ]);
     });
 
     it('should yield Error event and report if sendMessageStream throws', async () => {

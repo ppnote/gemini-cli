@@ -349,6 +349,7 @@ describe('GH-28537 / b/561554750 Memory Leak Regression Tests', () => {
 
       const mockConfig = makeFakeConfig();
       mockConfig.getCompressionThreshold = vi.fn().mockResolvedValue(0.5);
+      mockConfig.getContextWindow = vi.fn().mockReturnValue(undefined);
 
       const result = await compressionService.compress(
         mockChat,
@@ -376,6 +377,7 @@ describe('GH-28537 / b/561554750 Memory Leak Regression Tests', () => {
 
       const mockConfig = makeFakeConfig();
       mockConfig.getCompressionThreshold = vi.fn().mockResolvedValue(0.5);
+      mockConfig.getContextWindow = vi.fn().mockReturnValue(undefined);
 
       const result = await compressionService.compress(
         mockChat,
@@ -402,6 +404,7 @@ describe('GH-28537 / b/561554750 Memory Leak Regression Tests', () => {
 
       const mockConfig = makeFakeConfig();
       mockConfig.getCompressionThreshold = vi.fn().mockResolvedValue(0.5);
+      mockConfig.getContextWindow = vi.fn().mockReturnValue(undefined);
 
       const result = await compressionService.compress(
         mockChat,

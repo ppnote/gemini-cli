@@ -674,6 +674,7 @@ export interface ConfigParameters {
   importFormat?: 'tree' | 'flat';
   discoveryMaxDirs?: number;
   compressionThreshold?: number;
+  contextWindow?: number;
   interactive?: boolean;
   trustedFolder?: boolean;
   useBackgroundColor?: boolean;
@@ -895,6 +896,7 @@ export class Config implements McpContext, AgentLoopContext {
   private readonly importFormat: 'tree' | 'flat';
   private readonly discoveryMaxDirs: number;
   private readonly compressionThreshold: number | undefined;
+  private readonly contextWindow: number | undefined;
   /** Public for testing only */
   readonly interactive: boolean;
   private readonly ptyInfo: string;
@@ -1274,6 +1276,7 @@ export class Config implements McpContext, AgentLoopContext {
     this.importFormat = params.importFormat ?? 'tree';
     this.discoveryMaxDirs = params.discoveryMaxDirs ?? 200;
     this.compressionThreshold = params.compressionThreshold;
+    this.contextWindow = params.contextWindow;
     this.interactive = params.interactive ?? false;
     this.ptyInfo = params.ptyInfo ?? 'child_process';
     this.trustedFolder = params.trustedFolder;
@@ -3482,6 +3485,21 @@ export class Config implements McpContext, AgentLoopContext {
     return remoteThreshold;
   }
 
+  /**
+   * Explicit context window size in tokens from `model.contextWindow`.
+   * When set, callers should prefer this over `tokenLimit(model)`.
+   */
+  getContextWindow(): number | undefined {
+    if (
+      this.contextWindow !== undefined &&
+      Number.isFinite(this.contextWindow) &&
+      this.contextWindow > 0
+    ) {
+      return Math.floor(this.contextWindow);
+    }
+    return undefined;
+  }
+
   async getUserCaching(): Promise<boolean | undefined> {
     await this.ensureExperimentsLoaded();
 
@@ -3882,7 +3900,8 @@ export class Config implements McpContext, AgentLoopContext {
     return Math.min(
       // Estimate remaining context window in characters (1 token ~= 4 chars).
       4 *
-        (tokenLimit(this.model) - uiTelemetryService.getLastPromptTokenCount()),
+        (tokenLimit(this.model, this.getContextWindow()) -
+          uiTelemetryService.getLastPromptTokenCount()),
       this.truncateToolOutputThreshold,
     );
   }

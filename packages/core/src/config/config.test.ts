@@ -572,6 +572,44 @@ describe('Server Config (config.ts)', () => {
       });
     });
 
+    describe('getContextWindow', () => {
+      it('should return the configured context window', () => {
+        const config = new Config({
+          ...baseParams,
+          contextWindow: 200000,
+        });
+        expect(config.getContextWindow()).toBe(200000);
+      });
+
+      it('should floor a positive fractional context window', () => {
+        const config = new Config({
+          ...baseParams,
+          contextWindow: 200000.9,
+        });
+        expect(config.getContextWindow()).toBe(200000);
+      });
+
+      it('should return undefined when contextWindow is not set', () => {
+        const config = new Config(baseParams);
+        expect(config.getContextWindow()).toBeUndefined();
+      });
+
+      it('should ignore invalid or non-positive contextWindow values', () => {
+        for (const contextWindow of [
+          0,
+          -1,
+          Number.NaN,
+          Number.POSITIVE_INFINITY,
+        ]) {
+          const config = new Config({
+            ...baseParams,
+            contextWindow,
+          });
+          expect(config.getContextWindow()).toBeUndefined();
+        }
+      });
+    });
+
     describe('getUserCaching', () => {
       it('should return the remote experiment flag when available', async () => {
         const config = new Config({

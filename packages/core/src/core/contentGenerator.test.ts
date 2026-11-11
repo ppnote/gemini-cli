@@ -228,6 +228,37 @@ describe('createContentGenerator', () => {
     );
   });
 
+  it('should pass requestTimeoutMs as the whole-request httpOptions.timeout', async () => {
+    const mockConfig = {
+      getModel: vi.fn().mockReturnValue('gemini-pro'),
+      getProxy: vi.fn().mockReturnValue(undefined),
+      getUsageStatisticsEnabled: () => false,
+      getClientName: vi.fn().mockReturnValue(undefined),
+      getRequestTimeoutMs: () => 1_800_000,
+    } as unknown as Config;
+
+    const mockGenerator = {
+      models: {},
+    } as unknown as GoogleGenAI;
+    vi.mocked(GoogleGenAI).mockImplementation(() => mockGenerator as never);
+
+    await createContentGenerator(
+      {
+        apiKey: 'test-api-key',
+        authType: AuthType.USE_GEMINI,
+      },
+      mockConfig,
+    );
+
+    expect(GoogleGenAI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        httpOptions: expect.objectContaining({
+          timeout: 1_800_000,
+        }),
+      }),
+    );
+  });
+
   it('should use standard User-Agent for a2a-server running outside VS Code', async () => {
     const mockConfig = {
       getModel: vi.fn().mockReturnValue('gemini-pro'),

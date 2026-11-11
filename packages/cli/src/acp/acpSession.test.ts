@@ -124,6 +124,7 @@ describe('Session', () => {
     mockSendMessageStream = vi.fn();
     mockConfig = {
       getModel: vi.fn().mockReturnValue('gemini-pro'),
+      getContextWindow: vi.fn().mockReturnValue(undefined),
       getActiveModel: vi.fn().mockReturnValue('gemini-pro'),
       getModelRouterService: vi.fn().mockReturnValue({
         route: vi.fn().mockResolvedValue({ model: 'resolved-model' }),

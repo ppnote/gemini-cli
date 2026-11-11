@@ -20,7 +20,15 @@ type TokenCount = number;
 export const DEFAULT_TOKEN_LIMIT = 1_048_576;
 export const GEMMA_4_TOKEN_LIMIT = 256_000;
 
-export function tokenLimit(model: Model): TokenCount {
+export function tokenLimit(model: Model, contextWindow?: number): TokenCount {
+  if (
+    typeof contextWindow === 'number' &&
+    Number.isFinite(contextWindow) &&
+    contextWindow > 0
+  ) {
+    return Math.floor(contextWindow);
+  }
+
   // Add other models as they become relevant or if specified by config
   // Pulled from https://ai.google.dev/gemini-api/docs/models
   switch (model) {

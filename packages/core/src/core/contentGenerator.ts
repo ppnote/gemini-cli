@@ -365,13 +365,20 @@ export async function createContentGenerator(
         validateBaseUrl(baseUrl);
       }
 
+      const requestTimeoutMs = gcConfig.getRequestTimeoutMs?.();
       const httpOptions: {
         baseUrl?: string;
         headers: Record<string, string>;
+        timeout?: number;
       } = { headers };
 
       if (baseUrl) {
         httpOptions.baseUrl = baseUrl;
+      }
+      // @google/genai aborts the fetch, including an in-progress body, when
+      // this elapses. Undici headers/body timeouts do not cover that case.
+      if (requestTimeoutMs !== undefined) {
+        httpOptions.timeout = requestTimeoutMs;
       }
 
       const proxyUrl = config.proxy?.trim();

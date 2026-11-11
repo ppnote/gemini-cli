@@ -38,4 +38,20 @@ describe('tokenLimit', () => {
   it('should have the correct default token limit value', () => {
     expect(DEFAULT_TOKEN_LIMIT).toBe(1_048_576);
   });
+
+  it('should use an explicit contextWindow override regardless of model id', () => {
+    expect(tokenLimit('deepseek-flash', 200_000)).toBe(200_000);
+    expect(tokenLimit(DEFAULT_GEMINI_MODEL, 200_000)).toBe(200_000);
+    expect(tokenLimit('unknown-model', 40_000.9)).toBe(40_000);
+  });
+
+  it('should ignore invalid contextWindow values and keep model-based limits', () => {
+    expect(tokenLimit('unknown-model')).toBe(DEFAULT_TOKEN_LIMIT);
+    expect(tokenLimit('unknown-model', 0)).toBe(DEFAULT_TOKEN_LIMIT);
+    expect(tokenLimit('unknown-model', -1)).toBe(DEFAULT_TOKEN_LIMIT);
+    expect(tokenLimit(DEFAULT_GEMINI_MODEL, Number.NaN)).toBe(1_048_576);
+    expect(tokenLimit(DEFAULT_GEMINI_MODEL, Number.POSITIVE_INFINITY)).toBe(
+      1_048_576,
+    );
+  });
 });

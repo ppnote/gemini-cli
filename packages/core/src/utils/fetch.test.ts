@@ -275,7 +275,7 @@ describe('fetch utils', () => {
         httpsProxy: 'http://proxy.example.com',
         noProxy: 'localhost,127.0.0.1',
         headersTimeout: 45773134,
-        bodyTimeout: 300000,
+        bodyTimeout: 45773134,
       });
       expect(setGlobalDispatcher).toHaveBeenCalled();
     });

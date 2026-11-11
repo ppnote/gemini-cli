@@ -124,6 +124,27 @@ describe('settings-validation', () => {
       expect(negativeResult.success).toBe(false);
     });
 
+    it('should enforce minimum constraint on model.contextWindow', () => {
+      expect(
+        validateSettings({ model: { contextWindow: 200000 } }).success,
+      ).toBe(true);
+      expect(validateSettings({ model: { contextWindow: 1 } }).success).toBe(
+        true,
+      );
+
+      const zeroResult = validateSettings({ model: { contextWindow: 0 } });
+      expect(zeroResult.success).toBe(false);
+      expect(zeroResult.error?.issues[0]?.path).toEqual([
+        'model',
+        'contextWindow',
+      ]);
+
+      const negativeResult = validateSettings({
+        model: { contextWindow: -1000 },
+      });
+      expect(negativeResult.success).toBe(false);
+    });
+
     it('should accept unknown top-level keys (for migration compatibility)', () => {
       const settingsWithUnknownKey = {
         unknownKey: 'some value',

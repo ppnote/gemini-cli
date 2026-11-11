@@ -9,11 +9,12 @@ import { tokenLimit } from '@google/gemini-cli-core';
 export function getContextUsagePercentage(
   promptTokenCount: number,
   model: string | undefined,
+  contextWindow?: number,
 ): number {
   if (!model || typeof model !== 'string' || model.length === 0) {
     return 0;
   }
-  const limit = tokenLimit(model);
+  const limit = tokenLimit(model, contextWindow);
   if (limit <= 0) {
     return 0;
   }
@@ -24,6 +25,10 @@ export function isContextUsageHigh(
   promptTokenCount: number,
   model: string | undefined,
   threshold = 0.6,
+  contextWindow?: number,
 ): boolean {
-  return getContextUsagePercentage(promptTokenCount, model) > threshold;
+  return (
+    getContextUsagePercentage(promptTokenCount, model, contextWindow) >
+    threshold
+  );
 }

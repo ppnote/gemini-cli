@@ -30,8 +30,10 @@ export class PrivateIpError extends Error {
   }
 }
 
-let defaultHeadersTimeout = 60000; // 60 seconds
-const defaultBodyTimeout = 300000; // 5 minutes
+let defaultHeadersTimeout = 60000; // 60 seconds, time until response headers
+/** Floor for the streaming read timeout. A short headers budget must not shrink it. */
+const MIN_BODY_TIMEOUT_MS = 300_000;
+let defaultBodyTimeout = MIN_BODY_TIMEOUT_MS;
 let currentProxy: string | undefined = undefined;
 
 function getBuildConnector():
@@ -227,11 +229,15 @@ export function updateGlobalFetchTimeouts(timeoutMs: number) {
     );
   }
   defaultHeadersTimeout = timeoutMs;
+  // headersTimeout only waits for the status line. bodyTimeout is the read
+  // idle timeout, and undici's HTTP/2 path applies it with stream.setTimeout,
+  // which cuts the stream on a deadline. Raise it with the configured budget,
+  // but never below the 5 minute streaming floor.
+  defaultBodyTimeout = Math.max(timeoutMs, MIN_BODY_TIMEOUT_MS);
   defaultSafeAgent = createSafeAgent({
     headersTimeout: defaultHeadersTimeout,
     bodyTimeout: defaultBodyTimeout,
   });
-  // We keep body timeout high for LLM streaming responses
   if (currentProxy) {
     setGlobalProxy(currentProxy);
   } else {

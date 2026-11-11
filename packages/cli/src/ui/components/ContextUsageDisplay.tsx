@@ -23,7 +23,11 @@ export const ContextUsageDisplay = ({
   terminalWidth: number;
 }) => {
   const settings = useSettings();
-  const percentage = getContextUsagePercentage(promptTokenCount, model);
+  const percentage = getContextUsagePercentage(
+    promptTokenCount,
+    model,
+    settings.merged.model?.contextWindow,
+  );
   const percentageUsed = (percentage * 100).toFixed(0);
 
   const threshold =

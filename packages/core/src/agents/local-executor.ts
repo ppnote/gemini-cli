@@ -924,7 +924,10 @@ export class LocalAgentExecutor<TOutput extends z.ZodTypeAny> {
     const threshold =
       (await this.context.config.getCompressionThreshold()) ??
       DEFAULT_COMPRESSION_TOKEN_THRESHOLD;
-    const modelLimit = tokenLimit(model);
+    const modelLimit = tokenLimit(
+      model,
+      this.context.config.getContextWindow(),
+    );
 
     const lastPromptTokenCount = chat.getLastPromptTokenCount();
     const currentHistory = chat.getHistory(false);

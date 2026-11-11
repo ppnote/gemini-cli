@@ -2132,6 +2132,42 @@ describe('loadCliConfig requestTimeoutMs', () => {
   });
 });
 
+describe('loadCliConfig contextWindow', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(os.homedir).mockReturnValue('/mock/home/user');
+    vi.stubEnv('GEMINI_API_KEY', 'test-api-key');
+    vi.spyOn(ExtensionManager.prototype, 'getExtensions').mockReturnValue([]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('should pass model.contextWindow from settings to the core config', async () => {
+    process.argv = ['node', 'script.js'];
+    const argv = await parseArguments(createTestMergedSettings());
+    const settings = createTestMergedSettings({
+      model: {
+        contextWindow: 200000,
+        compressionThreshold: 0.2,
+      },
+    });
+    const config = await loadCliConfig(settings, 'test-session', argv);
+    expect(config.getContextWindow()).toBe(200000);
+    expect(await config.getCompressionThreshold()).toBe(0.2);
+  });
+
+  it('should leave contextWindow unset when it is not in settings', async () => {
+    process.argv = ['node', 'script.js'];
+    const argv = await parseArguments(createTestMergedSettings());
+    const settings = createTestMergedSettings();
+    const config = await loadCliConfig(settings, 'test-session', argv);
+    expect(config.getContextWindow()).toBeUndefined();
+  });
+});
+
 describe('loadCliConfig useRipgrep', () => {
   beforeEach(() => {
     vi.resetAllMocks();

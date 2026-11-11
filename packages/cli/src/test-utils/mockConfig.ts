@@ -121,6 +121,7 @@ export const createMockConfig = (overrides: Partial<Config> = {}): Config =>
     getFolderTrust: vi.fn().mockReturnValue(true),
     isTrustedFolder: vi.fn().mockReturnValue(true),
     getCompressionThreshold: vi.fn().mockResolvedValue(undefined),
+    getContextWindow: vi.fn().mockReturnValue(undefined),
     getUserCaching: vi.fn().mockResolvedValue(false),
     getNumericalRoutingEnabled: vi.fn().mockResolvedValue(false),
     getClassifierThreshold: vi.fn().mockResolvedValue(undefined),

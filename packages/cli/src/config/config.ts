@@ -1079,6 +1079,7 @@ export async function loadCliConfig(
     summarizeToolOutput: settings.model?.summarizeToolOutput,
     ideMode,
     disableLoopDetection: settings.model?.disableLoopDetection,
+    contextWindow: settings.model?.contextWindow,
     compressionThreshold: settings.model?.compressionThreshold,
     folderTrust,
     interactive,

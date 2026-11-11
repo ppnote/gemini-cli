@@ -549,9 +549,12 @@ their corresponding top-level category object in your `settings.json` file.
 
 - **`model.requestTimeoutMs`** (number):
 
-  - **Description:** How long to wait, in milliseconds, for the API to start
-    responding before a request is aborted and retried. Defaults to 60000. Raise
-    this if long-thinking requests are timing out.
+  - **Description:** Deadline in milliseconds for one model request. Time
+    until response headers, and aborting the in-flight request, use this value.
+    Idle time between streamed chunks uses the larger of this value and 300000
+    ms. When unset, headers time out at 60000 ms and body reads at 300000 ms,
+    with no overall deadline. Raise this if long-thinking or long-streaming
+    requests are cut off.
   - **Default:** `undefined`
   - **Requires restart:** Yes
 
@@ -561,6 +564,15 @@ their corresponding top-level category object in your `settings.json` file.
     per-tool token budgets (for example {"run_shell_command": {"tokenBudget":
     2000}}). Currently only the run_shell_command tool supports summarization.
   - **Default:** `undefined`
+
+- **`model.contextWindow`** (number):
+
+  - **Description:** The model's context window size in tokens. When set, this
+    overrides the built-in per-model token limit used for chat compression and
+    context usage. For example, 200000 with compressionThreshold 0.2 triggers
+    compression around 40000 tokens.
+  - **Default:** `undefined`
+  - **Requires restart:** Yes
 
 - **`model.compressionThreshold`** (number):
 

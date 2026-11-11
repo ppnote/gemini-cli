@@ -361,6 +361,7 @@ describe('useGeminiStream', () => {
     resetBillingTurnState: vi.fn(),
     getQuotaErrorOccurred: vi.fn(() => false),
     getModel: vi.fn(() => 'gemini-2.5-pro'),
+    getContextWindow: vi.fn(() => undefined),
     getContentGeneratorConfig: vi.fn(() => ({
       model: 'test-model',
       apiKey: 'test-key',

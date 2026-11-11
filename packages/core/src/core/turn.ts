@@ -30,6 +30,10 @@ import { InvalidStreamError, type GeminiChat } from './geminiChat.js';
 import { parseThought, type ThoughtSummary } from '../utils/thoughtUtils.js';
 import type { ModelConfigKey } from '../services/modelConfigService.js';
 import { getCitations } from '../utils/generateContentResponseUtilities.js';
+import {
+  containsPseudoToolCall,
+  PSEUDO_TOOL_CALL_ERROR_MESSAGE,
+} from '../utils/pseudoToolCall.js';
 import { LlmRole } from '../telemetry/types.js';
 import { populateToolDisplay } from '../agent/tool-display-utils.js';
 
@@ -278,6 +282,7 @@ export class Turn {
     } = {},
   ): AsyncGenerator<ServerGeminiStreamEvent> {
     const { displayContent, role = LlmRole.MAIN, apiHistoryOverride } = options;
+    let accumulatedResponseText = '';
     try {
       // Note: This assumes `sendMessageStream` yields events like
       // { type: StreamEventType.RETRY } or { type: StreamEventType.CHUNK, value: GenerateContentResponse }
@@ -305,6 +310,7 @@ export class Turn {
           this.pendingCitations.clear();
           this.finishReason = undefined;
           this.hasLoggedRagTrace = false;
+          accumulatedResponseText = '';
           yield { type: GeminiEventType.Retry };
           continue; // Skip to the next event in the stream
         }
@@ -380,6 +386,7 @@ export class Turn {
 
         const text = getResponseText(resp);
         if (text) {
+          accumulatedResponseText += text;
           yield { type: GeminiEventType.Content, value: text, traceId };
         }
 
@@ -390,6 +397,22 @@ export class Turn {
           if (event) {
             yield event;
           }
+        }
+
+        // Weak models sometimes dump XML-style tool calls as plain text.
+        // Treat that as a failed tool-use attempt so the UI stops waiting.
+        if (
+          this.pendingToolCalls.length === 0 &&
+          containsPseudoToolCall(accumulatedResponseText)
+        ) {
+          yield {
+            type: GeminiEventType.InvalidStream,
+            value: {
+              type: 'MALFORMED_FUNCTION_CALL',
+              message: PSEUDO_TOOL_CALL_ERROR_MESSAGE,
+            },
+          };
+          return;
         }
 
         for (const citation of getCitations(resp)) {

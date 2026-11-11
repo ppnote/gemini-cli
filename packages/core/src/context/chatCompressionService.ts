@@ -568,6 +568,8 @@ export class ChatCompressionService {
       };
     }
 
+    const modelLimit = tokenLimit(model, config.getContextWindow());
+
     // Fire PreCompress hook before compression
     // This fires for both manual and auto compression attempts
     const trigger = force ? PreCompressTrigger.Manual : PreCompressTrigger.Auto;
@@ -584,8 +586,7 @@ export class ChatCompressionService {
       const threshold =
         (await config.getCompressionThreshold()) ??
         DEFAULT_COMPRESSION_TOKEN_THRESHOLD;
-      const isOverModelThreshold =
-        originalTokenCount >= threshold * tokenLimit(model);
+      const isOverModelThreshold = originalTokenCount >= threshold * modelLimit;
 
       if (!isOverModelThreshold) {
         return {
@@ -661,7 +662,7 @@ export class ChatCompressionService {
     );
 
     const historyForSummarizer =
-      originalToCompressTokenCount < tokenLimit(model)
+      originalToCompressTokenCount < modelLimit
         ? originalHistoryToCompress
         : historyToCompressTruncated;
 
